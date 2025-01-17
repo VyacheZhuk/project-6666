@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -40,7 +41,6 @@ var tasks = map[string]Task{
 	},
 }
 
-// Ниже напишите обработчики для каждого эндпоинта
 func getTasks(w http.ResponseWriter, r *http.Request) {
 	resp, err := json.Marshal(tasks)
 	if err != nil {
@@ -48,8 +48,10 @@ func getTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "applications/json")
+	w.Header().Set("Content-Type", "application/json")
+
 	w.WriteHeader(http.StatusOK)
+
 	w.Write(resp)
 }
 
@@ -63,8 +65,13 @@ func postTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = json.Unmarshal(buf.Bytes(), &tasks); err != nil {
+	if err = json.Unmarshal(buf.Bytes(), &task); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if _, ok := tasks[task.ID]; ok {
+		http.Error(w, "Задача уже существует", http.StatusBadRequest)
 		return
 	}
 
@@ -76,12 +83,11 @@ func postTask(w http.ResponseWriter, r *http.Request) {
 
 func getTask(w http.ResponseWriter, r *http.Request) {
 
-	id := chi.URLParam(r, "id")
+	ID := chi.URLParam(r, "id")
 
-	task, ok := tasks[id]
-
+	task, ok := tasks[ID]
 	if !ok {
-		http.Error(w, "Задача не найдена", http.StatusNoContent)
+		http.Error(w, "Задача не найдена", http.StatusBadRequest)
 		return
 	}
 
@@ -91,7 +97,7 @@ func getTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Contetnt-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(resp)
 }
@@ -105,7 +111,6 @@ func deleteTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Задача не найдена", http.StatusBadRequest)
 		return
 	}
-
 	tasks[task.ID] = task
 
 	delete(tasks, "task")
@@ -115,6 +120,7 @@ func deleteTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+
 	r := chi.NewRouter()
 
 	r.Get("/tasks", getTasks)
